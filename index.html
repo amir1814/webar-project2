@@ -71,7 +71,7 @@
             animation="property: scale; to: 0.35 0.35 0.35; dir: alternate; dur: 1000; loop: true">
         </a-box>
 
-        <!-- کره قرمز (اختیاری) -->
+        <!-- کره قرمز (اختیاری، در فاصله‌ای دیگر) -->
         <a-sphere id="sphere"
             material="color: red;"
             scale="1.5 1.5 1.5"
@@ -107,14 +107,21 @@
         const textEl = navEl.querySelector('.text');
         const cameraEl = document.querySelector('[gps-camera]');
 
-        // تابع تولید مختصات تصادفی در شعاع ۱۰ متری از نقطه ورودی
-        function randomNearby(lat, lng, radiusMeters = 10) {
+        // تابع تولید مختصات تصادفی در فاصله‌ی بین minDist تا maxDist متر از نقطه ورودی
+        function randomNearby(lat, lng, minDist = 10, maxDist = 15) {
             const R = 6371000; // شعاع زمین به متر
-            const dLat = (radiusMeters / R) * (180 / Math.PI);
-            const dLng = (radiusMeters / (R * Math.cos(lat * Math.PI / 180))) * (180 / Math.PI);
-            const randLat = (Math.random() - 0.5) * 2 * dLat;
-            const randLng = (Math.random() - 0.5) * 2 * dLng;
-            return { lat: lat + randLat, lng: lng + randLng };
+            
+            // انتخاب فاصله‌ی تصادفی بین minDist و maxDist
+            const dist = minDist + Math.random() * (maxDist - minDist);
+            
+            // انتخاب زاویه‌ی تصادفی (۰ تا ۳۶۰ درجه)
+            const angle = Math.random() * 2 * Math.PI;
+            
+            // محاسبه تغییرات طول و عرض بر اساس فاصله و زاویه
+            const dLat = (dist * Math.cos(angle)) / R * (180 / Math.PI);
+            const dLng = (dist * Math.sin(angle)) / (R * Math.cos(lat * Math.PI / 180)) * (180 / Math.PI);
+            
+            return { lat: lat + dLat, lng: lng + dLng };
         }
 
         // تابع محاسبه فاصله (هاورساین)
@@ -166,9 +173,9 @@
 
             const { latitude: userLat, longitude: userLng } = camComp.currentCoords;
 
-            // اگر هنوز هدف تعیین نشده، یک نقطه تصادفی در شعاع ۱۰ متری تولید کن
+            // اگر هنوز هدف تعیین نشده، یک نقطه تصادفی در فاصله‌ی ۱۰ تا ۱۵ متری تولید کن
             if (!targetSet) {
-                const random = randomNearby(userLat, userLng, 10);
+                const random = randomNearby(userLat, userLng, 10, 15);
                 setTargetCoords(random.lat, random.lng);
                 debugEl.innerHTML += `<br>📍 موقعیت شما: ${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
             }
