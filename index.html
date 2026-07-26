@@ -125,7 +125,7 @@
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 1.8; // ارتفاع متوسط (متر)
+        let cubeAltitude = 0.7; // ارتفاع متوسط (بین ۰٫۵ تا ۱ متر)
         let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
@@ -145,13 +145,16 @@
         // ============================================================
         //  توابع کمکی
         // ============================================================
-        function generateRandomCoords(baseLat, baseLng, radiusMeters = 10) {
+        function generateRandomCoords(baseLat, baseLng, minDist = 10, maxDist = 15) {
             // هر 0.00001 درجه تقریباً برابر 1.1 متر است
-            const offsetLat = (Math.random() - 0.5) * 2 * (radiusMeters / 111000);
-            const offsetLng = (Math.random() - 0.5) * 2 * (radiusMeters / 111000);
+            const offsetScale = 0.000009; // تقریباً 1 متر
+            const dist = minDist + Math.random() * (maxDist - minDist);
+            const angle = Math.random() * 2 * Math.PI;
+            const dLat = (dist * Math.cos(angle)) * offsetScale;
+            const dLng = (dist * Math.sin(angle)) * offsetScale;
             return {
-                lat: baseLat + offsetLat,
-                lng: baseLng + offsetLng
+                lat: baseLat + dLat,
+                lng: baseLng + dLng
             };
         }
 
@@ -176,16 +179,16 @@
         // ============================================================
         //  ساخت مکعب در موقعیت جدید
         // ============================================================
-        function placeCube(lat, lng, alt = 1.8) {
+        function placeCube(lat, lng, alt = 0.7) {
             // حذف مکعب قبلی
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            // ساخت المان مکعب
+            // ساخت المان مکعب با altitude در gps-entity-place (روش استاندارد)
             const box = document.createElement('a-box');
-            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
-            box.setAttribute('position', `0 ${alt} 0`);
+            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
+            // altitude همان ارتفاع از سطح زمین است (نیازی به position نیست)
             box.setAttribute('material', 'color: yellow;');
             box.setAttribute('scale', '0.4 0.4 0.4');
             box.setAttribute('animation', 'property: scale; to: 0.6 0.6 0.6; dir: alternate; dur: 1000; loop: true');
@@ -199,7 +202,7 @@
             isCubePlaced = true;
 
             // به‌روزرسانی دیباگ
-            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)}`;
+            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${alt.toFixed(2)} متر)`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.style.color = '#0f0';
 
@@ -221,10 +224,10 @@
             // به‌روزرسانی مختصات دوربین در دیباگ
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
-            // اگر مکعب هنوز قرار داده نشده، یک موقعیت تصادفی در شعاع ۱۰ متری بساز
+            // اگر مکعب هنوز قرار داده نشده، یک موقعیت تصادفی در فاصله‌ی ۱۰ تا ۱۵ متری بساز
             if (!isCubePlaced) {
-                const randomPos = generateRandomCoords(userLat, userLng, 10);
-                const alt = 1.5 + Math.random() * 0.5; // بین ۱٫۵ تا ۲ متر
+                const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
+                const alt = 0.5 + Math.random() * 0.5; // بین ۰٫۵ تا ۱ متر
                 placeCube(randomPos.lat, randomPos.lng, alt);
                 // بعد از قرار دادن مکعب، ادامه می‌دهیم تا در همان لحظه فاصله و جهت محاسبه شود
             }
