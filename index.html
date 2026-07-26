@@ -240,7 +240,7 @@
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
             if (!isCubePlaced) {
-                const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
+                const randomPos = generateRandomCoords(userLat, userLng, 5, 6);
                 const alt = 2.8;
                 placeCube(randomPos.lat, randomPos.lng, alt);
             }
