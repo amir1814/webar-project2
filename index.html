@@ -31,8 +31,13 @@
             border: 1px solid #0f0;
             box-shadow: 0 0 15px rgba(0,255,0,0.3);
         }
-        #debug .label { color: #aaa; }
-        #debug .value { color: #0f0; font-weight: bold; }
+        #debug .label {
+            color: #aaa;
+        }
+        #debug .value {
+            color: #0f0;
+            font-weight: bold;
+        }
         #distance {
             position: absolute;
             top: 20px;
@@ -93,7 +98,7 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <a-camera gps-camera rotation-reader></a-camera>
         
-        <!-- ظرف مکعب (توسط جاوااسکریپت پر می‌شود) -->
+        <!-- مکعب به‌صورت پویا توسط جاوااسکریپت ساخته می‌شود -->
         <a-entity id="cube-container"></a-entity>
     </a-scene>
 
@@ -116,10 +121,18 @@
 
     <script>
         // ============================================================
+        //  🧭 تنظیمات جهت‌یابی (در صورت نیاز این عدد را تغییر دهید)
+        // ============================================================
+        // اگر مکعب پشت سرتان ظاهر می‌شود (چرخش 180 درجه)، این عدد را روی 180 قرار دهید.
+        // اگر مکعب با 200 درجه دیده می‌شد و می‌خواهید با 0 درجه دیده شود، این عدد را روی 200 قرار دهید.
+        const COMPASS_OFFSET = 0; // ← این عدد را تغییر دهید تا مکعب درست نشان داده شود
+
+        // ============================================================
         //  متغیرهای اصلی
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
+        let cubeAltitude = 2.8;
         let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
@@ -170,37 +183,46 @@
         }
 
         // ============================================================
-        //  ساخت مکعب در موقعیت جدید (ارتفاع ۱.۸ متر از سطح زمین)
+        //  ساخت مکعب در موقعیت جدید (با Wrapper برای ارتفاع)
         // ============================================================
-        function placeCube(lat, lng) {
-            // پاک کردن مکعب قبلی
+        function placeCube(lat, lng, alt = 2.8) {
+            // حذف مکعب قبلی
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            const box = document.createElement('a-box');
-            // مختصات جغرافیایی بدون altitude (ارتفاع صفر فرض می‌شود)
-            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
-            // ارتفاع مکعب را با position در محور Y تنظیم می‌کنیم (۱.۸ متر = سطح چشم)
-            box.setAttribute('position', '0 1.8 0');
-            box.setAttribute('material', 'color: yellow;');
+            // =========================================================
+            //  ⭐ راه‌حل استاندارد AR.js برای ارتفاع:
+            //  مختصات GPS را به پدر (wrapper) می‌دهیم
+            //  و ارتفاع (position) را به فرزند (مکعب) می‌دهیم
+            // =========================================================
             
-            // اسکیل ۰٫۱ = ۱۰ سانتی‌متر (ثابت)
-            box.setAttribute('scale', '0.3 0.3 0.3');
-            // انیمیشن بزرگ‌شدن تا ۰٫۱۵ (۱۵ سانتی‌متر)
-            box.setAttribute('animation', 'property: scale; to: 0.35 0.35 0.35; dir: alternate; dur: 1000; loop: true');
+            // 1. پدر (Wrapper) - موقعیت GPS روی زمین
+            const wrapper = document.createElement('a-entity');
+            wrapper.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
 
-            cubeContainer.appendChild(box);
+            // 2. فرزند (مکعب) - ارتفاع ۲٫۸ متری
+            const box = document.createElement('a-box');
+            box.setAttribute('position', `0 ${alt} 0`); // ← اینجا ارتفاع اعمال می‌شود
+            box.setAttribute('material', 'color: yellow;');
+            box.setAttribute('scale', '0.1 0.1 0.1');
+            box.setAttribute('animation', 'property: scale; to: 0.15 0.15 0.15; dir: alternate; dur: 1000; loop: true');
 
+            // قرار دادن مکعب داخل wrapper
+            wrapper.appendChild(box);
+            cubeContainer.appendChild(wrapper);
+
+            // ذخیره مختصات
             cubeLat = lat;
             cubeLng = lng;
+            cubeAltitude = alt;
             isCubePlaced = true;
 
-            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)}`;
+            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${alt.toFixed(2)} متر)`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.style.color = '#0f0';
 
-            console.log(`✅ مکعب در مختصات (${lat}, ${lng}) با ارتفاع ۱.۸ متر قرار گرفت.`);
+            console.log(`✅ مکعب در مختصات (${lat}, ${lng}) با ارتفاع ${alt} متر قرار گرفت.`);
         }
 
         // ============================================================
@@ -217,19 +239,29 @@
 
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
-            // اگر مکعب قرار داده نشده، یک موقعیت تصادفی در شعاع ۱۰–۱۵ متری بساز
             if (!isCubePlaced) {
-                const randomPos = generateRandomCoords(userLat, userLng, 5, 7);
-                placeCube(randomPos.lat, randomPos.lng);
+                const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
+                const alt = 2.8;
+                placeCube(randomPos.lat, randomPos.lng, alt);
             }
 
             if (isCubePlaced && cubeLat !== null && cubeLng !== null) {
                 const dist = computeDistance(userLat, userLng, cubeLat, cubeLng);
-                const bearing = computeBearing(userLat, userLng, cubeLat, cubeLng);
-                const heading = cameraEl.getAttribute('rotation').y;
+                
+                // =========================================================
+                //  🧭 تصحیح زاویه با استفاده از COMPASS_OFFSET (فقط روی heading اعمال می‌شود)
+                // =========================================================
+                const rawBearing = computeBearing(userLat, userLng, cubeLat, cubeLng);
+                let rawHeading = cameraEl.getAttribute('rotation').y;
+                
+                // اعمال افست روی Heading (چون معمولاً سنسور گوشی خطا دارد)
+                let heading = (rawHeading + COMPASS_OFFSET) % 360;
+                let bearing = rawBearing; // bearing را دست نمی‌زنیم
 
+                // به‌روزرسانی دیباگ
                 distDebugEl.textContent = `${dist.toFixed(1)} متر`;
                 headingDebugEl.textContent = `${heading.toFixed(1)}°`;
+
                 distValueEl.textContent = `${dist.toFixed(1)} متر`;
 
                 let diff = (bearing - heading + 360) % 360;
@@ -257,9 +289,6 @@
             }
         }, 500);
 
-        // ============================================================
-        //  رویدادهای صحنه
-        // ============================================================
         scene.addEventListener('loaded', () => {
             statusEl.textContent = '✅ صحنه بارگذاری شد. منتظر GPS...';
         });
@@ -269,7 +298,7 @@
             statusEl.style.color = '#ff4444';
         });
 
-        console.log('🚀 برنامه WebAR با مکعب پویا (ارتفاع اصلاح‌شده) راه‌اندازی شد.');
+        console.log('🚀 برنامه WebAR با مکعب پویا راه‌اندازی شد.');
     </script>
 </body>
 </html>
