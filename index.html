@@ -125,7 +125,7 @@
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 0.7; // ارتفاع متوسط (بین ۰٫۵ تا ۱ متر)
+        let cubeAltitude = 1.2; // ارتفاع ۱٫۲ متری (کمر تا سینه)
         let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
@@ -177,21 +177,21 @@
         }
 
         // ============================================================
-        //  ساخت مکعب در موقعیت جدید
+        //  ساخت مکعب در موقعیت جدید (با ارتفاع و سایز مناسب)
         // ============================================================
-        function placeCube(lat, lng, alt = 0.7) {
+        function placeCube(lat, lng, alt = 1.2) {
             // حذف مکعب قبلی
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            // ساخت المان مکعب با altitude در gps-entity-place (روش استاندارد)
+            // ساخت المان مکعب با استفاده از position برای ارتفاع (استاندارد و دقیق‌تر)
             const box = document.createElement('a-box');
-            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
-            // altitude همان ارتفاع از سطح زمین است (نیازی به position نیست)
+            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
+            box.setAttribute('position', `0 ${alt} 0`); // ارتفاع ۱٫۲ متر بالای زمین
             box.setAttribute('material', 'color: yellow;');
-            box.setAttribute('scale', '0.4 0.4 0.4');
-            box.setAttribute('animation', 'property: scale; to: 0.6 0.6 0.6; dir: alternate; dur: 1000; loop: true');
+            box.setAttribute('scale', '1.2 1.2 1.2'); // سایز بزرگ و قابل‌دیدن در ۱۰ متری
+            box.setAttribute('animation', 'property: scale; to: 1.5 1.5 1.5; dir: alternate; dur: 1000; loop: true');
 
             cubeContainer.appendChild(box);
 
@@ -227,7 +227,7 @@
             // اگر مکعب هنوز قرار داده نشده، یک موقعیت تصادفی در فاصله‌ی ۱۰ تا ۱۵ متری بساز
             if (!isCubePlaced) {
                 const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
-                const alt = 0.5 + Math.random() * 0.5; // بین ۰٫۵ تا ۱ متر
+                const alt = 1.2; // ارتفاع ثابت ۱٫۲ متر (بهترین حالت برای دیدن بدون نیاز به زمین)
                 placeCube(randomPos.lat, randomPos.lng, alt);
                 // بعد از قرار دادن مکعب، ادامه می‌دهیم تا در همان لحظه فاصله و جهت محاسبه شود
             }
@@ -257,7 +257,7 @@
                 arrowIcon.style.transform = arrowRot;
 
                 // اگر خیلی نزدیک شد
-                if (dist < 5) {
+                if (dist < 2) {
                     navText.textContent = 'رسیدید! 🎉';
                     arrowIcon.style.display = 'none';
                 } else {
