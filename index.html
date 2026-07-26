@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Web AR</title>
     
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
@@ -13,155 +12,92 @@
     <script src="https://rawcdn.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-gps.js"></script>
 
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            touch-action: none;
-        }
+        body { margin: 0; overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }
     </style>
 </head>
 
 <body>
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <a-camera gps-camera rotation-reader></a-camera>
         
+        <!-- مکعب زرد در مختصات درخواستی شما -->
         <a-box 
-            gps-entity-place="latitude: 32.697756836557005; longitude: 51.67978855616637;"
+            gps-entity-place="latitude: 35.72498874639343; longitude: 51.38811321942436;"
             material="color: yellow;"
             scale="1 1 1"
             animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; dur: 1000; loop: true">
         </a-box>
 
-                <a-sphere
-            gps-entity-place="latitude: 32.697711836557; longitude: 51.67958055616637;"
+        <!-- کره قرمز کمی آنطرف‌تر برای تنوع -->
+        <a-sphere
+            gps-entity-place="latitude: 35.72498874639343; longitude: 51.38831321942436;"
             material="color: red;"
             scale="2 2 2"
-            position="2 0 0"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear">
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000;">
         </a-sphere>
     </a-scene>
 
-    <button class="ar-button" onclick="startAR()">
-    </button>
-
-    <div id="distance" style="
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 1.5rem;
-      color: white;
-      text-shadow: 0 0 5px black;
-    ">
-      در حال بارگذاری...
+    <div id="distance" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; color: white; text-shadow: 0 0 5px black;">
+        در حال بارگذاری...
     </div>
 
-    <style>
-      #navigator {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 2rem;
-        color: white;
-        text-shadow: 0 0 5px black;
-        display: flex;
-        align-items: center;
-        pointer-events: none;
-      }
-      #navigator .arrow {
-        margin-right: 0.5em;
-        transition: transform 0.2s ease-out;
-      }
-    </style>
-
-    <div id="navigator">
-      <div class="arrow">⬆️</div>
-      <div class="text">جلو</div>
+    <div id="navigator" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 2rem; color: white; text-shadow: 0 0 5px black; display: flex; align-items: center; pointer-events: none;">
+        <div class="arrow" style="margin-left: 0.5em; transition: transform 0.2s ease-out;">⬆️</div>
+        <div class="text">جلو</div>
     </div>
 
     <script>
-      const targetLat =  32.697756836557005;
-      const targetLng = 51.67978855616637;
+        // هدف راهنما دقیقاً همان مختصات مکعب است
+        const targetLat = 35.72498874639343;
+        const targetLng = 51.38811321942436;
 
-      function computeBearing(lat1, lon1, lat2, lon2) {
-        const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-        const Δλ = (lon2-lon1) * Math.PI/180;
-        const y = Math.sin(Δλ) * Math.cos(φ2);
-        const x = Math.cos(φ1)*Math.sin(φ2) -
-                  Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
-        let θ = Math.atan2(y, x) * 180/Math.PI;
-        return (θ + 360) % 360;  
-      }
-
-      const cameraEl = document.querySelector('[gps-camera]');
-      const navEl = document.getElementById('navigator');
-      const arrowEl = navEl.querySelector('.arrow');
-      const textEl = navEl.querySelector('.text');
-      const distEl = document.getElementById('distance');
-
-      setInterval(() => {
-        const camComp = cameraEl.components['gps-camera'];
-        if (!camComp || !camComp.currentCoords) return;
-
-        const { latitude: userLat, longitude: userLng } = camComp.currentCoords;
-        const bearingToTarget = computeBearing(userLat, userLng, targetLat, targetLng);
-        const heading = cameraEl.getAttribute('rotation').y;
-
-        let diff = (bearingToTarget - heading + 360) % 360;
-        let instruction, arrowRot;
-        if (diff > 315 || diff <= 45) {
-          instruction = 'جلو';
-          arrowRot = 'rotate(0deg)';
-        } else if (diff > 45 && diff <= 135) {
-          instruction = 'راست';
-          arrowRot = 'rotate(90deg)';
-        } else if (diff > 135 && diff <= 225) {
-          instruction = 'عقب';
-          arrowRot = 'rotate(180deg)';
-        } else {
-          instruction = 'چپ';
-          arrowRot = 'rotate(270deg)';
+        function computeBearing(lat1, lon1, lat2, lon2) {
+            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const y = Math.sin(Δλ) * Math.cos(φ2);
+            const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+            let θ = Math.atan2(y, x) * 180/Math.PI;
+            return (θ + 360) % 360;
         }
 
-        const toRad = d => d * Math.PI/180;
-        const R = 6371e3;
-        const φ1 = toRad(userLat), φ2 = toRad(targetLat);
-        const Δφ = toRad(targetLat-userLat), Δλ = toRad(targetLng-userLng);
-        const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const cameraEl = document.querySelector('[gps-camera]');
+        const navEl = document.getElementById('navigator');
+        const arrowEl = navEl.querySelector('.arrow');
+        const textEl = navEl.querySelector('.text');
+        const distEl = document.getElementById('distance');
 
-        distEl.textContent = `فاصله: ${dist.toFixed(1)} متر`;
-        if (dist < 5) {
-          textEl.textContent = 'رسیدید ';
-          arrowEl.style.display = 'none';
-        } else {
-          textEl.textContent = instruction;
-          arrowEl.style.display = 'block';
-          arrowEl.style.transform = arrowRot;
-        }
-      }, 500);
-    </script>
+        setInterval(() => {
+            const camComp = cameraEl.components['gps-camera'];
+            if (!camComp || !camComp.currentCoords) return;
 
-    <script>
-        document.querySelector('a-scene').addEventListener('loaded', function () {
-            document.getElementById('loading').style.display = 'none';
-        });
+            const { latitude: userLat, longitude: userLng } = camComp.currentCoords;
+            const bearingToTarget = computeBearing(userLat, userLng, targetLat, targetLng);
+            const heading = cameraEl.getAttribute('rotation').y;
 
-        function startAR() {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        document.querySelector('a-scene').components.arjs.start();
-                    });
+            let diff = (bearingToTarget - heading + 360) % 360;
+            let instruction, arrowRot;
+            if (diff > 315 || diff <= 45) { instruction = 'جلو'; arrowRot = 'rotate(0deg)'; }
+            else if (diff > 45 && diff <= 135) { instruction = 'راست'; arrowRot = 'rotate(90deg)'; }
+            else if (diff > 135 && diff <= 225) { instruction = 'عقب'; arrowRot = 'rotate(180deg)'; }
+            else { instruction = 'چپ'; arrowRot = 'rotate(270deg)'; }
+
+            const toRad = d => d * Math.PI/180;
+            const R = 6371e3;
+            const φ1 = toRad(userLat), φ2 = toRad(targetLat);
+            const Δφ = toRad(targetLat-userLat), Δλ = toRad(targetLng-userLng);
+            const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+            const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            distEl.textContent = `فاصله تا مکعب: ${dist.toFixed(1)} متر`;
+            if (dist < 5) {
+                textEl.textContent = 'رسیدید!';
+                arrowEl.style.display = 'none';
+            } else {
+                textEl.textContent = instruction;
+                arrowEl.style.display = 'block';
+                arrowEl.style.transform = arrowRot;
             }
-        }
+        }, 500);
     </script>
 </body>
 </html>
