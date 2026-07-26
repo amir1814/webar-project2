@@ -31,13 +31,8 @@
             border: 1px solid #0f0;
             box-shadow: 0 0 15px rgba(0,255,0,0.3);
         }
-        #debug .label {
-            color: #aaa;
-        }
-        #debug .value {
-            color: #0f0;
-            font-weight: bold;
-        }
+        #debug .label { color: #aaa; }
+        #debug .value { color: #0f0; font-weight: bold; }
         #distance {
             position: absolute;
             top: 20px;
@@ -98,7 +93,7 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <a-camera gps-camera rotation-reader></a-camera>
         
-        <!-- مکعب به‌صورت پویا توسط جاوااسکریپت ساخته می‌شود -->
+        <!-- ظرف مکعب (توسط جاوااسکریپت پر می‌شود) -->
         <a-entity id="cube-container"></a-entity>
     </a-scene>
 
@@ -125,7 +120,6 @@
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 2.8; // ارتفاع ۲٫۸ متر
         let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
@@ -176,34 +170,37 @@
         }
 
         // ============================================================
-        //  ساخت مکعب در موقعیت جدید (با position برای ارتفاع)
+        //  ساخت مکعب در موقعیت جدید (ارتفاع ۱.۸ متر از سطح زمین)
         // ============================================================
-        function placeCube(lat, lng, alt = 2.8) {
+        function placeCube(lat, lng) {
+            // پاک کردن مکعب قبلی
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
             const box = document.createElement('a-box');
-            // ⭐ altitude را حذف کردم و فقط مختصات افقی را می‌دهم
+            // مختصات جغرافیایی بدون altitude (ارتفاع صفر فرض می‌شود)
             box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
-            // ⭐ ارتفاع را با position اعمال می‌کنم (این روش تضمینی است)
-            box.setAttribute('position', `0 ${alt} 0`);
+            // ارتفاع مکعب را با position در محور Y تنظیم می‌کنیم (۱.۸ متر = سطح چشم)
+            box.setAttribute('position', '0 1.8 0');
             box.setAttribute('material', 'color: yellow;');
+            
+            // اسکیل ۰٫۱ = ۱۰ سانتی‌متر (ثابت)
             box.setAttribute('scale', '0.1 0.1 0.1');
+            // انیمیشن بزرگ‌شدن تا ۰٫۱۵ (۱۵ سانتی‌متر)
             box.setAttribute('animation', 'property: scale; to: 0.15 0.15 0.15; dir: alternate; dur: 1000; loop: true');
 
             cubeContainer.appendChild(box);
 
             cubeLat = lat;
             cubeLng = lng;
-            cubeAltitude = alt;
             isCubePlaced = true;
 
-            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${alt.toFixed(2)} متر)`;
+            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)}`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.style.color = '#0f0';
 
-            console.log(`✅ مکعب در مختصات (${lat}, ${lng}) با ارتفاع ${alt} متر قرار گرفت.`);
+            console.log(`✅ مکعب در مختصات (${lat}, ${lng}) با ارتفاع ۱.۸ متر قرار گرفت.`);
         }
 
         // ============================================================
@@ -220,10 +217,10 @@
 
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
+            // اگر مکعب قرار داده نشده، یک موقعیت تصادفی در شعاع ۱۰–۱۵ متری بساز
             if (!isCubePlaced) {
                 const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
-                const alt = 2.8;
-                placeCube(randomPos.lat, randomPos.lng, alt);
+                placeCube(randomPos.lat, randomPos.lng);
             }
 
             if (isCubePlaced && cubeLat !== null && cubeLng !== null) {
@@ -260,6 +257,9 @@
             }
         }, 500);
 
+        // ============================================================
+        //  رویدادهای صحنه
+        // ============================================================
         scene.addEventListener('loaded', () => {
             statusEl.textContent = '✅ صحنه بارگذاری شد. منتظر GPS...';
         });
@@ -269,7 +269,7 @@
             statusEl.style.color = '#ff4444';
         });
 
-        console.log('🚀 برنامه WebAR با مکعب پویا راه‌اندازی شد.');
+        console.log('🚀 برنامه WebAR با مکعب پویا (ارتفاع اصلاح‌شده) راه‌اندازی شد.');
     </script>
 </body>
 </html>
