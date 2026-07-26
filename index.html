@@ -20,17 +20,19 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <a-camera gps-camera rotation-reader></a-camera>
         
-        <!-- مکعب زرد با اندازه‌ی کوچک‌تر (0.4 تا 0.6) -->
+        <!-- مکعب زرد در ارتفاع چشم (1.5 متر بالای زمین) -->
         <a-box 
             gps-entity-place="latitude: 35.72498874639343; longitude: 51.38811321942436;"
+            position="0 1.5 0"
             material="color: yellow;"
             scale="0.4 0.4 0.4"
             animation="property: scale; to: 0.6 0.6 0.6; dir: alternate; dur: 1000; loop: true">
         </a-box>
 
-        <!-- کره قرمز (اندازه‌اش همان 2 است، دست نمی‌زنیم) -->
+        <!-- کره قرمز در ارتفاع چشم -->
         <a-sphere
             gps-entity-place="latitude: 35.72498874639343; longitude: 51.38831321942436;"
+            position="0 1.5 0"
             material="color: red;"
             scale="2 2 2"
             animation="property: rotation; to: 0 360 0; loop: true; dur: 10000;">
