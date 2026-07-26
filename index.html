@@ -125,7 +125,7 @@
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 2.8; // ارتفاع ۲٫۸ متر (بالای سر، تا گوشی را افقی نگه دارید)
+        let cubeAltitude = 2.8; // ارتفاع ۲٫۸ متر
         let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
@@ -176,7 +176,7 @@
         }
 
         // ============================================================
-        //  ساخت مکعب در موقعیت جدید (ارتفاع ۲٫۸ متر و سایز ۰٫۸)
+        //  ساخت مکعب در موقعیت جدید (اسکیل ۰٫۱ = ۱۰ سانتی‌متر)
         // ============================================================
         function placeCube(lat, lng, alt = 2.8) {
             while (cubeContainer.firstChild) {
@@ -184,13 +184,14 @@
             }
 
             const box = document.createElement('a-box');
-            // تنظیم ارتفاع با altitude (استاندارد AR.js)
             box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
             box.setAttribute('position', '0 0 0');
             box.setAttribute('material', 'color: yellow;');
-            // ⭐ سایز ۰٫۸ متر (جمع‌وجور و مناسب)
-            box.setAttribute('scale', '0.8 0.8 0.8');
-            box.setAttribute('animation', 'property: scale; to: 1.0 1.0 1.0; dir: alternate; dur: 1000; loop: true');
+            
+            // ⭐ اسکیل ۰٫۱ = ۱۰ سانتی‌متر
+            box.setAttribute('scale', '0.1 0.1 0.1');
+            // انیمیشن بزرگ‌شدن تا ۰٫۱۵ (۱۵ سانتی‌متر)
+            box.setAttribute('animation', 'property: scale; to: 0.15 0.15 0.15; dir: alternate; dur: 1000; loop: true');
 
             cubeContainer.appendChild(box);
 
@@ -222,7 +223,7 @@
 
             if (!isCubePlaced) {
                 const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
-                const alt = 2.8; // ارتفاع ثابت ۲٫۸ متر
+                const alt = 2.8;
                 placeCube(randomPos.lat, randomPos.lng, alt);
             }
 
