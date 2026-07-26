@@ -176,7 +176,7 @@
         }
 
         // ============================================================
-        //  ساخت مکعب در موقعیت جدید (اسکیل ۰٫۱ = ۱۰ سانتی‌متر)
+        //  ساخت مکعب در موقعیت جدید (با position برای ارتفاع)
         // ============================================================
         function placeCube(lat, lng, alt = 2.8) {
             while (cubeContainer.firstChild) {
@@ -184,13 +184,12 @@
             }
 
             const box = document.createElement('a-box');
-            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
-            box.setAttribute('position', '0 0 0');
+            // ⭐ altitude را حذف کردم و فقط مختصات افقی را می‌دهم
+            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
+            // ⭐ ارتفاع را با position اعمال می‌کنم (این روش تضمینی است)
+            box.setAttribute('position', `0 ${alt} 0`);
             box.setAttribute('material', 'color: yellow;');
-            
-            // ⭐ اسکیل ۰٫۱ = ۱۰ سانتی‌متر
             box.setAttribute('scale', '0.1 0.1 0.1');
-            // انیمیشن بزرگ‌شدن تا ۰٫۱۵ (۱۵ سانتی‌متر)
             box.setAttribute('animation', 'property: scale; to: 0.15 0.15 0.15; dir: alternate; dur: 1000; loop: true');
 
             cubeContainer.appendChild(box);
