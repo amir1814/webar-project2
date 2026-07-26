@@ -85,15 +85,15 @@
 
 <body>
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-        <!-- دوربین: بدون position تا مطمئن شویم روی زمین (Y=0) قرار می‌گیرد -->
-        <a-camera gps-camera rotation-reader></a-camera>
+        <!-- 1️⃣ دوربین در ارتفاع چشم (۱٫۶ متر) -->
+        <a-camera gps-camera rotation-reader position="0 1.6 0"></a-camera>
         
         <a-entity id="cube-container"></a-entity>
     </a-scene>
 
     <div id="debug">
         <div><span class="label">📍 دوربین (lat, lng):</span> <span id="cam-coords" class="value">در انتظار GPS...</span></div>
-        <div><span class="label">🎯 مکعب (lat, lng, alt):</span> <span id="cube-coords" class="value">هنوز مشخص نشده</span></div>
+        <div><span class="label">🎯 مکعب (lat, lng):</span> <span id="cube-coords" class="value">هنوز مشخص نشده</span></div>
         <div><span class="label">📏 فاصله:</span> <span id="dist-debug" class="value">--</span></div>
         <div><span class="label">🧭 سمت (heading):</span> <span id="heading-debug" class="value">--</span></div>
     </div>
@@ -112,7 +112,7 @@
         //  تنظیمات
         // ============================================================
         const COMPASS_OFFSET = 0;
-        const TARGET_HEIGHT = 1.7; // ارتفاع مورد نظر (متر)
+        const EYE_HEIGHT = 1.6; // ارتفاع چشم (دوربین و مکعب هر دو در این ارتفاع قرار می‌گیرند)
 
         // ============================================================
         //  متغیرهای اصلی
@@ -135,7 +135,7 @@
         // ============================================================
         //  توابع کمکی
         // ============================================================
-        function generateRandomCoords(baseLat, baseLng, minDist = 5, maxDist = 6) {
+        function generateRandomCoords(baseLat, baseLng, minDist = 3, maxDist = 5) {
             const offsetScale = 0.000009;
             const dist = minDist + Math.random() * (maxDist - minDist);
             const angle = Math.random() * 2 * Math.PI;
@@ -163,27 +163,27 @@
         }
 
         // ============================================================
-        //  ساخت مکعب (با ارتفاع در خود Wrapper)
+        //  ساخت مکعب (با هم‌تراز کردن محور Y)
         // ============================================================
-        function placeCube(lat, lng, alt = TARGET_HEIGHT) {
+        function placeCube(lat, lng) {
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
             // =========================================================
-            //  ⭐ اصلاح اساسی:
-            //  ارتفاع (altitude) را به خود Wrapper می‌دهیم،
-            //  و position مکعب را روی صفر می‌گذاریم.
-            //  اینطوری مکعب دقیقاً در ارتفاع ۱٫۷ متری از سطح زمین می‌ایستد.
+            //  🎯 روش درست و استاندارد:
+            //  1. Wrapper فقط موقعیت GPS را دارد (بدون altitude).
+            //  2. خود مکعب با position="0 EYE_HEIGHT 0" به ارتفاع چشم می‌رود.
+            //  اینطوری دوربین (که در ۱٫۶ است) و مکعب (که در ۱٫۶ است) کاملاً هم‌تراز می‌شوند.
             // =========================================================
             const wrapper = document.createElement('a-entity');
-            wrapper.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
+            wrapper.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
 
             const box = document.createElement('a-box');
-            box.setAttribute('position', '0 0 0'); // دقیقاً هم‌تراز با والد
+            box.setAttribute('position', `0 ${EYE_HEIGHT} 0`); // ← ارتفاع دقیقاً برابر با دوربین
             box.setAttribute('material', 'color: yellow;');
-            box.setAttribute('scale', '0.05 0.05 0.05');
-            box.setAttribute('animation', 'property: scale; to: 0.1 0.1 0.1; dir: alternate; dur: 1000; loop: true');
+            box.setAttribute('scale', '0.08 0.08 0.08');
+            box.setAttribute('animation', 'property: scale; to: 0.12 0.12 0.12; dir: alternate; dur: 1000; loop: true');
 
             wrapper.appendChild(box);
             cubeContainer.appendChild(wrapper);
@@ -192,10 +192,10 @@
             cubeLng = lng;
             isCubePlaced = true;
 
-            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${alt.toFixed(2)} متر)`;
+            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${EYE_HEIGHT} متر)`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.style.color = '#0f0';
-            console.log(`✅ مکعب در ارتفاع ${alt} متر قرار گرفت.`);
+            console.log(`✅ مکعب در ارتفاع ${EYE_HEIGHT} متر قرار گرفت.`);
         }
 
         // ============================================================
@@ -212,8 +212,8 @@
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
             if (!isCubePlaced) {
-                const randomPos = generateRandomCoords(userLat, userLng, 5, 6);
-                placeCube(randomPos.lat, randomPos.lng, TARGET_HEIGHT);
+                const randomPos = generateRandomCoords(userLat, userLng, 3, 5);
+                placeCube(randomPos.lat, randomPos.lng);
             }
 
             if (isCubePlaced && cubeLat !== null && cubeLng !== null) {
