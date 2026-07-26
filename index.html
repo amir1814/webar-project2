@@ -186,9 +186,9 @@
             box.setAttribute('material', 'color: yellow;');
             
             // اسکیل ۰٫۱ = ۱۰ سانتی‌متر (ثابت)
-            box.setAttribute('scale', '0.1 0.1 0.1');
+            box.setAttribute('scale', '0.3 0.3 0.3');
             // انیمیشن بزرگ‌شدن تا ۰٫۱۵ (۱۵ سانتی‌متر)
-            box.setAttribute('animation', 'property: scale; to: 0.15 0.15 0.15; dir: alternate; dur: 1000; loop: true');
+            box.setAttribute('animation', 'property: scale; to: 0.35 0.35 0.35; dir: alternate; dur: 1000; loop: true');
 
             cubeContainer.appendChild(box);
 
@@ -219,7 +219,7 @@
 
             // اگر مکعب قرار داده نشده، یک موقعیت تصادفی در شعاع ۱۰–۱۵ متری بساز
             if (!isCubePlaced) {
-                const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
+                const randomPos = generateRandomCoords(userLat, userLng, 5, 7);
                 placeCube(randomPos.lat, randomPos.lng);
             }
 
