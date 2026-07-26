@@ -125,7 +125,7 @@
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 1.2; // ارتفاع ۱٫۲ متری (کمر تا سینه)
+        let cubeAltitude = 2.0; // ارتفاع ۲ متر (دقیقاً هم‌تراز با چشم)
         let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
@@ -146,8 +146,7 @@
         //  توابع کمکی
         // ============================================================
         function generateRandomCoords(baseLat, baseLng, minDist = 10, maxDist = 15) {
-            // هر 0.00001 درجه تقریباً برابر 1.1 متر است
-            const offsetScale = 0.000009; // تقریباً 1 متر
+            const offsetScale = 0.000009;
             const dist = minDist + Math.random() * (maxDist - minDist);
             const angle = Math.random() * 2 * Math.PI;
             const dLat = (dist * Math.cos(angle)) * offsetScale;
@@ -177,31 +176,29 @@
         }
 
         // ============================================================
-        //  ساخت مکعب در موقعیت جدید (با ارتفاع و سایز مناسب)
+        //  ساخت مکعب در موقعیت جدید (ارتفاع ۲ متر و سایز ۱٫۵)
         // ============================================================
-        function placeCube(lat, lng, alt = 1.2) {
-            // حذف مکعب قبلی
+        function placeCube(lat, lng, alt = 2.0) {
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            // ساخت المان مکعب با استفاده از position برای ارتفاع (استاندارد و دقیق‌تر)
             const box = document.createElement('a-box');
-            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
-            box.setAttribute('position', `0 ${alt} 0`); // ارتفاع ۱٫۲ متر بالای زمین
+            // ⭐ تنظیم ارتفاع مستقیماً در gps-entity-place (استاندارد AR.js)
+            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
+            // position را روی صفر قرار می‌دهیم چون altitude ارتفاع را تعیین می‌کند
+            box.setAttribute('position', '0 0 0');
             box.setAttribute('material', 'color: yellow;');
-            box.setAttribute('scale', '1.2 1.2 1.2'); // سایز بزرگ و قابل‌دیدن در ۱۰ متری
-            box.setAttribute('animation', 'property: scale; to: 1.5 1.5 1.5; dir: alternate; dur: 1000; loop: true');
+            box.setAttribute('scale', '1.5 1.5 1.5'); // سایز بزرگ برای دیدن در ۱۰ متری
+            box.setAttribute('animation', 'property: scale; to: 1.8 1.8 1.8; dir: alternate; dur: 1000; loop: true');
 
             cubeContainer.appendChild(box);
 
-            // ذخیره مختصات
             cubeLat = lat;
             cubeLng = lng;
             cubeAltitude = alt;
             isCubePlaced = true;
 
-            // به‌روزرسانی دیباگ
             cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${alt.toFixed(2)} متر)`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.style.color = '#0f0';
@@ -221,31 +218,23 @@
 
             const { latitude: userLat, longitude: userLng } = camComp.currentCoords;
 
-            // به‌روزرسانی مختصات دوربین در دیباگ
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
-            // اگر مکعب هنوز قرار داده نشده، یک موقعیت تصادفی در فاصله‌ی ۱۰ تا ۱۵ متری بساز
             if (!isCubePlaced) {
                 const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
-                const alt = 1.2; // ارتفاع ثابت ۱٫۲ متر (بهترین حالت برای دیدن بدون نیاز به زمین)
+                const alt = 2.0; // ارتفاع ثابت ۲ متر (هم‌تراز با چشم)
                 placeCube(randomPos.lat, randomPos.lng, alt);
-                // بعد از قرار دادن مکعب، ادامه می‌دهیم تا در همان لحظه فاصله و جهت محاسبه شود
             }
 
-            // اگر مکعب قرار داده شده، فاصله و جهت را محاسبه کن
             if (isCubePlaced && cubeLat !== null && cubeLng !== null) {
                 const dist = computeDistance(userLat, userLng, cubeLat, cubeLng);
                 const bearing = computeBearing(userLat, userLng, cubeLat, cubeLng);
                 const heading = cameraEl.getAttribute('rotation').y;
 
-                // به‌روزرسانی دیباگ
                 distDebugEl.textContent = `${dist.toFixed(1)} متر`;
                 headingDebugEl.textContent = `${heading.toFixed(1)}°`;
-
-                // نمایش فاصله در بالای صفحه
                 distValueEl.textContent = `${dist.toFixed(1)} متر`;
 
-                // محاسبه جهت راهنما
                 let diff = (bearing - heading + 360) % 360;
                 let instruction, arrowRot;
                 if (diff > 315 || diff <= 45) { instruction = 'جلو'; arrowRot = 'rotate(0deg)'; }
@@ -256,7 +245,6 @@
                 navText.textContent = instruction;
                 arrowIcon.style.transform = arrowRot;
 
-                // اگر خیلی نزدیک شد
                 if (dist < 5) {
                     navText.textContent = 'رسیدید! 🎉';
                     arrowIcon.style.display = 'none';
@@ -264,7 +252,6 @@
                     arrowIcon.style.display = 'block';
                 }
 
-                // به‌روزرسانی وضعیت
                 if (dist < 50) {
                     statusEl.textContent = `👀 نزدیک! (${dist.toFixed(1)} متر)`;
                 } else {
@@ -273,14 +260,10 @@
             }
         }, 500);
 
-        // ============================================================
-        //  مدیریت خطاها و رویدادها
-        // ============================================================
         scene.addEventListener('loaded', () => {
             statusEl.textContent = '✅ صحنه بارگذاری شد. منتظر GPS...';
         });
 
-        // اگر GPS خطا داد
         window.addEventListener('gps-camera-error', (e) => {
             statusEl.textContent = '❌ خطای GPS: ' + (e.detail.message || 'لطفاً موقعیت را فعال کنید');
             statusEl.style.color = '#ff4444';
