@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Web AR GPS Cube v2</title>
+    <title>Web AR GPS Cube v3 - فوری</title>
 
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js">
     </script>
@@ -26,7 +26,6 @@
             background: #000;
         }
 
-        /* Debug Panel - بالا سمت چپ */
         #debug {
             position: absolute;
             top: 12px;
@@ -46,7 +45,6 @@
             box-shadow: 0 0 24px rgba(0, 255, 0, 0.12);
             backdrop-filter: blur(4px);
             font-family: 'Courier New', monospace;
-            letter-spacing: 0.3px;
         }
         #debug .label {
             color: #8af;
@@ -54,12 +52,6 @@
         #debug .value {
             color: #0f0;
             font-weight: bold;
-        }
-        #debug .value.accuracy {
-            color: #ffaa44;
-        }
-        #debug .value.good {
-            color: #4f4;
         }
         .debug-row {
             display: flex;
@@ -72,7 +64,6 @@
             border-bottom: none;
         }
 
-        /* فاصله - وسط بالا */
         #distance {
             position: absolute;
             top: 20px;
@@ -95,7 +86,6 @@
             color: #ffd700;
         }
 
-        /* ناویگیتور - پایین */
         #navigator {
             position: absolute;
             bottom: 40px;
@@ -146,7 +136,6 @@
             }
         }
 
-        /* وضعیت - پایین تر از ناویگیتور */
         #status {
             position: absolute;
             bottom: 120px;
@@ -174,7 +163,6 @@
             border-color: rgba(255, 107, 107, 0.2);
         }
 
-        /* دکمه ریست (برای دیباگ) - مخفی در حالت عادی */
         #reset-btn {
             position: absolute;
             bottom: 200px;
@@ -199,7 +187,6 @@
             transform: scale(1.05);
         }
 
-        /* Responsive */
         @media (max-width: 480px) {
             #debug {
                 font-size: 11px;
@@ -236,49 +223,32 @@
 
 <body>
 
-    <!-- ====== صحنه AR ====== -->
     <a-scene
     embedded
-    arjs="
-    sourceType: webcam;
-    debugUIEnabled: false;
-    detectionMode: mono_and_matrix;
-    matrixCodeType: 3x3;
-    "
+    arjs="sourceType: webcam; debugUIEnabled: false;"
     vr-mode-ui="enabled: false"
     >
-    <!-- ====== نورپردازی ====== -->
+    <!-- نورپردازی -->
     <a-light type="ambient" intensity="0.9" color="#ffffff"></a-light>
     <a-light type="directional" position="3 8 5" intensity="1.2" color="#fff5e6"></a-light>
     <a-light type="directional" position="-4 6 -3" intensity="0.5" color="#aaccff"></a-light>
     <a-light type="hemisphere" intensity="0.6" color="#87ceeb" ground-color="#3a3a3a"></a-light>
 
-    <!-- ====== دوربین با ارتفاع ۱٫۶ متر ====== -->
+    <!-- دوربین با ارتفاع ۱٫۶ متر -->
     <a-camera
     id="camera"
-    gps-camera="minDistance: 1; simulateLatitude: 0; simulateLongitude: 0;"
+    gps-camera="minDistance: 1;"
     rotation-reader
     position="0 1.6 0"
-    look-controls="enabled: false"
     >
 </a-camera>
 
-<!-- ====== کانتینر مکعب (جاوااسکریپت آن را پر می‌کند) ====== -->
+<!-- کانتینر مکعب -->
 <a-entity id="cube-container"></a-entity>
-
-<!-- ====== نشانگر شمال (اختیاری) ====== -->
-<a-entity
-id="north-indicator"
-position="0 0 -3"
-rotation="0 0 0"
-visible="false"
->
-<a-text value="N" color="#ff4444" align="center" scale="0.5 0.5 0.5" position="0 0 0"></a-text>
-</a-entity>
 
 </a-scene>
 
-<!-- ====== دیباگ ====== -->
+<!-- دیباگ -->
 <div id="debug">
     <div class="debug-row">
         <span class="label">📍 دوربین</span>
@@ -302,34 +272,27 @@ visible="false"
     </div>
     <div class="debug-row">
         <span class="label">📡 دقت GPS</span>
-        <span id="accuracy-debug" class="value accuracy">--</span>
-    </div>
-    <div class="debug-row">
-        <span class="label">📶 تعداد قرائت</span>
-        <span id="fix-count-debug" class="value">0</span>
+        <span id="accuracy-debug" class="value">--</span>
     </div>
 </div>
 
-<!-- ====== فاصله ====== -->
+<!-- فاصله -->
 <div id="distance">
     🎯 فاصله تا مکعب: <span id="dist-value">در حال محاسبه...</span>
 </div>
 
-<!-- ====== ناویگیتور ====== -->
+<!-- ناویگیتور -->
 <div id="navigator">
     <span class="arrow" id="arrow-icon">⬆️</span>
     <span class="text" id="nav-text">جلو</span>
 </div>
 
-<!-- ====== وضعیت ====== -->
+<!-- وضعیت -->
 <div id="status">🔄 منتظر دریافت موقعیت...</div>
 
-<!-- ====== دکمه ریست (مخفی) ====== -->
+<!-- دکمه ریست -->
 <button id="reset-btn" title="جای‌گذاری مجدد مکعب">⟳</button>
 
-<!-- ============================================================ -->
-<!-- ====== اسکریپت اصلی ====== -->
-<!-- ============================================================ -->
 <script>
     (function() {
         'use strict';
@@ -339,18 +302,11 @@ visible="false"
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 2.8; // ارتفاع مکعب از سطح زمین (متر)
+        let cubeAltitude = 2.8;
         let isCubePlaced = false;
-        let isGpsReady = false;
-        let gpsFixCount = 0;
-        let gpsAccuracy = 999; // متر
-        let deviceHeading = 0; // درجه (۰ = شمال، ساعتگرد)
+        let deviceHeading = 0;
         let headingValid = false;
-
-        // تاریخچه GPS برای تثبیت
-        const gpsHistory = [];
-        const GPS_STABILIZATION_COUNT = 4; // تعداد قرائت برای تثبیت
-        const MAX_ACCURACY = 25; // حداکثر دقت قابل قبول (متر)
+        let gpsAccuracy = 999;
 
         const scene = document.querySelector('a-scene');
         const cameraEl = document.querySelector('[gps-camera]');
@@ -363,7 +319,6 @@ visible="false"
         const headingDebugEl = document.getElementById('heading-debug');
         const bearingDebugEl = document.getElementById('bearing-debug');
         const accuracyDebugEl = document.getElementById('accuracy-debug');
-        const fixCountDebugEl = document.getElementById('fix-count-debug');
         const distValueEl = document.getElementById('dist-value');
         const arrowIcon = document.getElementById('arrow-icon');
         const navText = document.getElementById('nav-text');
@@ -373,7 +328,7 @@ visible="false"
         // ============================================================
         //  توابع کمکی
         // ============================================================
-        function generateRandomCoords(baseLat, baseLng, minDist = 12, maxDist = 20) {
+        function generateRandomCoords(baseLat, baseLng, minDist = 10, maxDist = 18) {
             const offsetScale = 0.000009;
             const dist = minDist + Math.random() * (maxDist - minDist);
             const angle = Math.random() * 2 * Math.PI;
@@ -408,7 +363,7 @@ visible="false"
         }
 
         // ============================================================
-        //  قرار دادن مکعب در موقعیت جدید (اسکیل ۰٫۵ = ۵۰ سانتی‌متر)
+        //  قرار دادن مکعب (فوری)
         // ============================================================
         function placeCube(lat, lng, alt) {
             // حذف مکعب قبلی
@@ -416,12 +371,10 @@ visible="false"
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            // ایجاد مکعب سه‌بعدی با متریال واقع‌گرایانه
             const box = document.createElement('a-box');
             box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt || 2.8};`);
             box.setAttribute('position', '0 0 0');
 
-            // متریال طلایی با بازتاب
             box.setAttribute('material', `
                         color: #FFD700;
                         metalness: 0.35;
@@ -431,10 +384,8 @@ visible="false"
                         shader: standard;
                     `);
 
-            // ⭐ اسکیل ۰٫۵ = ۵۰ سانتی‌متر (برای تست سه‌بعدی)
             box.setAttribute('scale', '0.5 0.5 0.5');
 
-            // انیمیشن تنفس (نوسان اندازه)
             box.setAttribute('animation', `
                         property: scale;
                         to: 0.58 0.58 0.58;
@@ -444,7 +395,6 @@ visible="false"
                         easing: ease-in-out;
                     `);
 
-            // انیمیشن چرخش آرام
             box.setAttribute('animation__rotate', `
                         property: rotation;
                         to: 0 360 0;
@@ -453,7 +403,6 @@ visible="false"
                         easing: linear;
                     `);
 
-            // سایه‌افکن (برای عمق بیشتر)
             box.setAttribute('shadow', 'cast: true; receive: true');
 
             cubeContainer.appendChild(box);
@@ -472,51 +421,7 @@ visible="false"
         }
 
         // ============================================================
-        //  تثبیت GPS و جای‌گذاری مکعب
-        // ============================================================
-        function tryPlaceCube(userLat, userLng, accuracy) {
-            // اگر مکعب قبلاً قرار گرفته، دیگر کاری نکن
-            if (isCubePlaced) return;
-
-            // ذخیره در تاریخچه
-            gpsHistory.push({ lat: userLat, lng: userLng, acc: accuracy });
-            if (gpsHistory.length > GPS_STABILIZATION_COUNT + 2) {
-                gpsHistory.shift();
-            }
-
-            gpsFixCount = gpsHistory.length;
-            fixCountDebugEl.textContent = gpsFixCount;
-
-            // بررسی دقت
-            const avgAcc = gpsHistory.reduce((sum, p) => sum + p.acc, 0) / gpsHistory.length;
-
-            // شرط تثبیت: حداقل N قرائت و دقت مناسب
-            if (gpsHistory.length >= GPS_STABILIZATION_COUNT && avgAcc < MAX_ACCURACY) {
-                // میانگین موقعیت از تاریخچه
-                const avgLat = gpsHistory.reduce((sum, p) => sum + p.lat, 0) / gpsHistory.length;
-                const avgLng = gpsHistory.reduce((sum, p) => sum + p.lng, 0) / gpsHistory.length;
-
-                const randomPos = generateRandomCoords(avgLat, avgLng, 10, 20);
-                const alt = 2.8;
-
-                // یکبار دیگر موقعیت مکعب را تصادفی می‌کنیم
-                placeCube(randomPos.lat, randomPos.lng, alt);
-
-                statusEl.textContent = `✅ مکعب در ${(randomPos.lat - avgLat) * 111000} متری قرار گرفت`;
-                statusEl.className = 'ready';
-
-                // پاک کردن تاریخچه برای جلوگیری از جای‌گذاری مجدد
-                gpsHistory.length = 0;
-            } else {
-                const needed = GPS_STABILIZATION_COUNT - gpsHistory.length;
-                const accMsg = avgAcc < MAX_ACCURACY ? '✅' : `⚠️ دقت ${avgAcc.toFixed(0)}m`;
-                statusEl.textContent = `⏳ تثبیت GPS... (${needed} قرائت دیگر) ${accMsg}`;
-                statusEl.className = '';
-            }
-        }
-
-        // ============================================================
-        //  آپدیت ناویگیتور (هر فریم)
+        //  آپدیت ناویگیتور
         // ============================================================
         function updateNavigator(userLat, userLng) {
             if (!isCubePlaced || cubeLat === null || cubeLng === null) return;
@@ -524,23 +429,16 @@ visible="false"
             const dist = computeDistance(userLat, userLng, cubeLat, cubeLng);
             const bearing = computeBearing(userLat, userLng, cubeLat, cubeLng);
 
-            // نمایش در دیباگ
             distDebugEl.textContent = `${dist.toFixed(1)} m`;
             bearingDebugEl.textContent = `${bearing.toFixed(1)}°`;
             distValueEl.textContent = `${dist.toFixed(1)} m`;
 
-            // ====== محاسبه جهت با استفاده از Compass واقعی ======
-            // deviceHeading از رویداد deviceorientationabsolute به‌روز می‌شود
             const heading = headingValid ? deviceHeading : 0;
-
             headingDebugEl.textContent = headingValid ?
                 `${heading.toFixed(1)}°` :
                 '⏳ انتظار برای Compass...';
 
-            // تفاوت بین جهت مکعب و جهت دوربین
             let diff = (bearing - heading + 360) % 360;
-
-            // تعیین دستور
             let instruction, arrowRot;
             if (diff > 315 || diff <= 45) {
                 instruction = '⬆️ جلو';
@@ -556,7 +454,6 @@ visible="false"
                 arrowRot = 'rotate(270deg)';
             }
 
-            // اگر خیلی نزدیک هستیم
             if (dist < 4) {
                 instruction = '🎯 رسیدید!';
                 navText.textContent = 'رسیدید! 🎉';
@@ -569,8 +466,7 @@ visible="false"
                 arrowIcon.style.transform = arrowRot;
             }
 
-            // وضعیت بر اساس فاصله
-            if (dist < 3) {
+            if (dist < 5) {
                 statusEl.textContent = `🎯 در کنار مکعب! (${dist.toFixed(1)}m)`;
                 statusEl.className = 'ready';
             } else if (dist < 30) {
@@ -583,7 +479,7 @@ visible="false"
         }
 
         // ============================================================
-        //  حلقه‌ی اصلی بروزرسانی (هر ۳۰۰ میلی‌ثانیه)
+        //  حلقه اصلی (بدون تثبیت)
         // ============================================================
         let lastUpdate = 0;
         const UPDATE_INTERVAL = 300;
@@ -608,19 +504,20 @@ visible="false"
                 longitude: userLng
             } = camComp.currentCoords;
 
-            // دقت GPS
-            const acc = camComp.currentCoords.accuracy || 999;
-            gpsAccuracy = acc;
+            gpsAccuracy = camComp.currentCoords.accuracy || 999;
 
             camCoordsEl.textContent = `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
-            accuracyDebugEl.textContent = acc < 50 ?
-                `${acc.toFixed(0)}m ✅` :
-                `${acc.toFixed(0)}m ⚠️`;
-            accuracyDebugEl.className = acc < 30 ? 'value good' : 'value accuracy';
+            accuracyDebugEl.textContent = gpsAccuracy < 50 ?
+                `${gpsAccuracy.toFixed(0)}m ✅` :
+                `${gpsAccuracy.toFixed(0)}m ⚠️`;
 
-            // ====== تلاش برای قرار دادن مکعب ======
+            // ====== قرار دادن مکعب در اولین فرصت ======
             if (!isCubePlaced) {
-                tryPlaceCube(userLat, userLng, acc);
+                // حتی اگر دقت کم باشد، مکعب را قرار بده
+                const randomPos = generateRandomCoords(userLat, userLng, 10, 18);
+                placeCube(randomPos.lat, randomPos.lng, 2.8);
+                statusEl.textContent = '✅ مکعب بلافاصله قرار گرفت!';
+                statusEl.className = 'ready';
                 requestAnimationFrame(mainLoop);
                 return;
             }
@@ -632,10 +529,9 @@ visible="false"
         }
 
         // ============================================================
-        //  رویداد: Compass واقعی (deviceorientationabsolute)
+        //  Compass
         // ============================================================
         if (window.DeviceOrientationEvent) {
-            // درخواست مجوز برای iOS 13+
             if (typeof DeviceOrientationEvent !== 'undefined' &&
                 typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
@@ -645,7 +541,6 @@ visible="false"
                             console.log('✅ مجوز Compass دریافت شد.');
                         } else {
                             console.warn('⚠️ مجوز Compass رد شد، از fallback استفاده می‌شود.');
-                            // fallback: از rotation-reader
                             fallbackCompass();
                         }
                     })
@@ -654,9 +549,7 @@ visible="false"
                         fallbackCompass();
                     });
             } else {
-                // دستگاه‌های معمولی
                 window.addEventListener('deviceorientationabsolute', onCompass);
-                // fallback در صورت عدم دریافت
                 setTimeout(() => {
                     if (!headingValid) {
                         console.warn('⚠️ Compass فعال نشد، از fallback استفاده می‌شود.');
@@ -671,21 +564,17 @@ visible="false"
 
         function onCompass(e) {
             if (e.alpha !== null && e.alpha !== undefined) {
-                // alpha: ۰ = شمال، ساعتگرد
                 deviceHeading = e.alpha;
                 headingValid = true;
             }
         }
 
-        // Fallback: استفاده از rotation-reader (کمتر دقیق)
         function fallbackCompass() {
             console.log('🔄 استفاده از fallback Compass (rotation-reader)');
-            // هر ۵۰۰ms یکبار از rotation دوربین بخوان
             setInterval(() => {
                 if (!headingValid) {
                     const rot = cameraEl.getAttribute('rotation');
                     if (rot && rot.y !== undefined) {
-                        // rotation.y را به محدوده ۰-۳۶۰ تبدیل کن
                         let h = rot.y % 360;
                         if (h < 0) h += 360;
                         deviceHeading = h;
@@ -696,7 +585,7 @@ visible="false"
         }
 
         // ============================================================
-        //  رویداد: خطاهای GPS
+        //  رویدادها
         // ============================================================
         window.addEventListener('gps-camera-error', (e) => {
             statusEl.textContent = '❌ خطای GPS: ' + (e.detail?.message || 'لطفاً موقعیت را فعال کنید');
@@ -704,29 +593,23 @@ visible="false"
             console.error('GPS Error:', e.detail);
         });
 
-        // ============================================================
-        //  رویداد: بارگذاری صحنه
-        // ============================================================
         scene.addEventListener('loaded', () => {
             statusEl.textContent = '✅ صحنه بارگذاری شد. منتظر GPS...';
             statusEl.className = '';
-            console.log('🚀 Web AR GPS Cube v2 راه‌اندازی شد.');
+            console.log('🚀 Web AR GPS Cube v3 (فوری) راه‌اندازی شد.');
         });
 
         // ============================================================
-        //  دکمه ریست (جای‌گذاری مجدد مکعب)
+        //  دکمه ریست
         // ============================================================
         resetBtn.addEventListener('click', () => {
             if (!isCubePlaced) return;
-            // حذف مکعب فعلی
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
             isCubePlaced = false;
             cubeLat = null;
             cubeLng = null;
-            gpsHistory.length = 0;
-            gpsFixCount = 0;
             statusEl.textContent = '🔄 در حال جای‌گذاری مجدد...';
             statusEl.className = '';
             cubeCoordsEl.textContent = '—';
@@ -741,15 +624,14 @@ visible="false"
         });
 
         // ============================================================
-        //  شروع حلقه
+        //  شروع
         // ============================================================
         requestAnimationFrame(mainLoop);
 
-        console.log('📡 Web AR GPS Cube v2 - آماده!');
+        console.log('📡 Web AR GPS Cube v3 - بدون تثبیت، قرارگیری فوری');
         console.log('   🔹 ارتفاع دوربین: ۱٫۶ متر');
         console.log('   🔹 اندازه مکعب: ۵۰ سانتی‌متر');
-        console.log('   🔹 دقت GPS مورد نیاز: < ۲۵ متر');
-        console.log('   🔹 تعداد قرائت برای تثبیت: ' + GPS_STABILIZATION_COUNT);
+        console.log('   🔹 مکعب به محض دریافت GPS قرار می‌گیرد');
 
     })();
 </script>
