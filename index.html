@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Web AR GPS Cube v4 - ارتفاع اصلاح شده</title>
+    <title>Web AR GPS Cube v5 - ارتفاع همسان</title>
 
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js">
     </script>
@@ -30,7 +30,7 @@
             position: absolute;
             top: 12px;
             left: 12px;
-            background: rgba(0, 0, 0, 0.82);
+            background: rgba(0, 0, 0, 0.85);
             color: #0f0;
             padding: 14px 18px;
             border-radius: 12px;
@@ -41,8 +41,8 @@
             max-width: 92%;
             pointer-events: none;
             line-height: 1.7;
-            border: 1px solid rgba(0, 255, 0, 0.35);
-            box-shadow: 0 0 24px rgba(0, 255, 0, 0.12);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 24px rgba(0, 255, 0, 0.1);
             backdrop-filter: blur(4px);
             font-family: 'Courier New', monospace;
         }
@@ -57,11 +57,14 @@
             display: flex;
             justify-content: space-between;
             gap: 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             padding: 2px 0;
         }
         .debug-row:last-child {
             border-bottom: none;
+        }
+        .highlight {
+            color: #ffd700 !important;
         }
 
         #distance {
@@ -71,7 +74,7 @@
             transform: translateX(-50%);
             font-size: 1.5rem;
             color: #fff;
-            text-shadow: 0 0 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.6);
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
             background: rgba(0, 0, 0, 0.55);
             padding: 8px 24px;
             border-radius: 30px;
@@ -106,7 +109,6 @@
             pointer-events: none;
             border: 1px solid rgba(255, 255, 255, 0.06);
             min-width: 200px;
-            transition: all 0.3s ease;
         }
         #navigator .arrow {
             transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -234,7 +236,7 @@
     <a-light type="directional" position="-4 6 -3" intensity="0.5" color="#aaccff"></a-light>
     <a-light type="hemisphere" intensity="0.6" color="#87ceeb" ground-color="#3a3a3a"></a-light>
 
-    <!-- دوربین با ارتفاع ۱٫۶ متر (برای نمای اولیه) و gps-camera که altitude را از GPS می‌گیرد -->
+    <!-- دوربین با ارتفاع اولیه ۱٫۶ متر (فقط برای نمایش، بعداً توسط GPS بازنویسی می‌شود) -->
     <a-camera
     id="camera"
     gps-camera="minDistance: 1;"
@@ -248,18 +250,26 @@
 
 </a-scene>
 
-<!-- دیباگ -->
+<!-- دیباگ کامل -->
 <div id="debug">
     <div class="debug-row">
-        <span class="label">📍 دوربین</span>
+        <span class="label">📍 دوربین (lat, lng)</span>
         <span id="cam-coords" class="value">در انتظار GPS...</span>
     </div>
     <div class="debug-row">
-        <span class="label">🎯 مکعب</span>
+        <span class="label">📶 ارتفاع دوربین (از GPS)</span>
+        <span id="cam-altitude" class="value">--</span>
+    </div>
+    <div class="debug-row">
+        <span class="label">🎯 مکعب (lat, lng)</span>
         <span id="cube-coords" class="value">—</span>
     </div>
     <div class="debug-row">
-        <span class="label">📏 فاصله</span>
+        <span class="label">📏 ارتفاع مکعب (مطلق)</span>
+        <span id="cube-altitude" class="value">—</span>
+    </div>
+    <div class="debug-row">
+        <span class="label">📏 فاصله افقی</span>
         <span id="dist-debug" class="value">--</span>
     </div>
     <div class="debug-row">
@@ -273,10 +283,6 @@
     <div class="debug-row">
         <span class="label">📡 دقت GPS</span>
         <span id="accuracy-debug" class="value">--</span>
-    </div>
-    <div class="debug-row">
-        <span class="label">📶 ارتفاع دوربین (از GPS)</span>
-        <span id="altitude-debug" class="value">--</span>
     </div>
 </div>
 
@@ -306,12 +312,12 @@
         // ============================================================
         let cubeLat = null;
         let cubeLng = null;
-        let cubeAltitude = 2.8; // ارتفاع مکعب از سطح زمین (نسبت به دوربین)
+        let cubeAbsoluteAlt = null; // ارتفاع مطلق مکعب (از سطح دریا)
         let isCubePlaced = false;
         let deviceHeading = 0;
         let headingValid = false;
         let gpsAccuracy = 999;
-        let cameraAltitude = 0; // ارتفاع دوربین از سطح دریا (از GPS)
+        let cameraAltitude = null; // ارتفاع دوربین از GPS
 
         const scene = document.querySelector('a-scene');
         const cameraEl = document.querySelector('[gps-camera]');
@@ -319,12 +325,13 @@
 
         // المان‌های UI
         const camCoordsEl = document.getElementById('cam-coords');
+        const camAltitudeEl = document.getElementById('cam-altitude');
         const cubeCoordsEl = document.getElementById('cube-coords');
+        const cubeAltitudeEl = document.getElementById('cube-altitude');
         const distDebugEl = document.getElementById('dist-debug');
         const headingDebugEl = document.getElementById('heading-debug');
         const bearingDebugEl = document.getElementById('bearing-debug');
         const accuracyDebugEl = document.getElementById('accuracy-debug');
-        const altitudeDebugEl = document.getElementById('altitude-debug');
         const distValueEl = document.getElementById('dist-value');
         const arrowIcon = document.getElementById('arrow-icon');
         const navText = document.getElementById('nav-text');
@@ -369,26 +376,27 @@
         }
 
         // ============================================================
-        //  قرار دادن مکعب با ارتفاع اصلاح شده
+        //  قرار دادن مکعب با ارتفاع همسان با دوربین
         // ============================================================
-        function placeCube(lat, lng, alt) {
+        function placeCube(lat, lng, altOffset = 0) {
             // حذف مکعب قبلی
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            // ارتفاع مکعب را به صورت absolute (نسبت به سطح دریا) تنظیم می‌کنیم
-            // اگر altitude دوربین از GPS موجود باشد، از آن استفاده می‌کنیم و مکعب را در ارتفاع (cameraAltitude + alt) قرار می‌دهیم
-            // در غیر این صورت، فقط از alt استفاده می‌کنیم (که ممکن است دقیق نباشد)
-            let absoluteAlt = alt;
+            // محاسبه ارتفاع مطلق مکعب:
+            // اگر ارتفاع دوربین موجود باشد، از آن استفاده کن و آفست را اضافه کن
+            // در غیر این صورت، از خود altOffset به عنوان ارتفاع مطلق استفاده کن (که معمولاً ۰ است)
+            let absoluteAlt = altOffset;
             if (cameraAltitude !== null && !isNaN(cameraAltitude) && cameraAltitude > -100) {
-                absoluteAlt = cameraAltitude + alt;
+                absoluteAlt = cameraAltitude + altOffset;
             } else {
-                // اگر altitude دوربین موجود نباشد، از alt به عنوان ارتفاع مطلق استفاده می‌کنیم
-                // (معمولاً alt حدود ۲٫۸ متر است که در سطح زمین قرار می‌گیرد)
-                absoluteAlt = alt;
+                // اگر ارتفاع دوربین در دسترس نبود، از آفست به عنوان ارتفاع مطلق استفاده کن
+                // (این معمولاً برای مواقعی است که GPS ارتفاع نمی‌دهد)
+                absoluteAlt = altOffset;
             }
 
+            // ساخت مکعب
             const box = document.createElement('a-box');
             box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${absoluteAlt};`);
             box.setAttribute('position', '0 0 0');
@@ -425,17 +433,21 @@
 
             cubeContainer.appendChild(box);
 
+            // ذخیره اطلاعات مکعب
             cubeLat = lat;
             cubeLng = lng;
-            cubeAltitude = alt; // ذخیره ارتفاع نسبی برای نمایش
+            cubeAbsoluteAlt = absoluteAlt;
             isCubePlaced = true;
 
-            cubeCoordsEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}  (ارتفاع ${absoluteAlt.toFixed(1)}m از سطح دریا)`;
+            // بروزرسانی دیباگ
+            cubeCoordsEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            cubeAltitudeEl.textContent = `${absoluteAlt.toFixed(1)} m (نسبت به سطح دریا)`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.className = 'ready';
             resetBtn.style.display = 'flex';
 
-            console.log(`✅ مکعب در (${lat.toFixed(6)}, ${lng.toFixed(6)}) با ارتفاع مطلق ${absoluteAlt.toFixed(2)} متر (نسبت به دوربین: ${alt} متر) قرار گرفت.`);
+            console.log(`✅ مکعب در (${lat.toFixed(6)}, ${lng.toFixed(6)}) با ارتفاع مطلق ${absoluteAlt.toFixed(2)} متر (آفست: ${altOffset} متر) قرار گرفت.`);
+            console.log(`   ارتفاع دوربین: ${cameraAltitude !== null ? cameraAltitude.toFixed(2) : 'نامشخص'} متر`);
         }
 
         // ============================================================
@@ -497,7 +509,7 @@
         }
 
         // ============================================================
-        //  حلقه اصلی (بدون تثبیت)
+        //  حلقه اصلی (بدون تثبیت، قرارگیری فوری)
         // ============================================================
         let lastUpdate = 0;
         const UPDATE_INTERVAL = 300;
@@ -523,16 +535,15 @@
                 altitude: userAlt
             } = camComp.currentCoords;
 
-            // ذخیره altitude دوربین
+            // ذخیره ارتفاع دوربین
             if (userAlt !== null && userAlt !== undefined && !isNaN(userAlt)) {
                 cameraAltitude = userAlt;
-                altitudeDebugEl.textContent = `${cameraAltitude.toFixed(1)} m`;
+                camAltitudeEl.textContent = `${cameraAltitude.toFixed(1)} m`;
             } else {
-                altitudeDebugEl.textContent = 'نامشخص';
+                camAltitudeEl.textContent = 'نامشخص';
             }
 
             gpsAccuracy = camComp.currentCoords.accuracy || 999;
-
             camCoordsEl.textContent = `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
             accuracyDebugEl.textContent = gpsAccuracy < 50 ?
                 `${gpsAccuracy.toFixed(0)}m ✅` :
@@ -540,9 +551,12 @@
 
             // ====== قرار دادن مکعب در اولین فرصت ======
             if (!isCubePlaced) {
+                // موقعیت مکعب را به صورت تصادفی در فاصله ۱۰ تا ۱۸ متری دوربین قرار بده
                 const randomPos = generateRandomCoords(userLat, userLng, 10, 18);
-                // ارتفاع مکعب نسبت به دوربین: 2.8 متر بالای سطح زمین
-                placeCube(randomPos.lat, randomPos.lng, 2.8);
+                // آفست = ۰ یعنی مکعب دقیقاً روی زمین (هم‌سطح دوربین) قرار می‌گیرد
+                // اگر می‌خواهید مکعب بالاتر باشد، آفست را افزایش دهید (مثلاً ۱٫۶ برای ارتفاع چشم)
+                const offset = 0; // ← اینجا را به ۰ یا ۱٫۶ یا هر مقدار دلخواه تغییر دهید
+                placeCube(randomPos.lat, randomPos.lng, offset);
                 statusEl.textContent = '✅ مکعب بلافاصله قرار گرفت!';
                 statusEl.className = 'ready';
                 requestAnimationFrame(mainLoop);
@@ -556,7 +570,7 @@
         }
 
         // ============================================================
-        //  Compass
+        //  Compass (جهت‌یاب واقعی)
         // ============================================================
         if (window.DeviceOrientationEvent) {
             if (typeof DeviceOrientationEvent !== 'undefined' &&
@@ -623,7 +637,7 @@
         scene.addEventListener('loaded', () => {
             statusEl.textContent = '✅ صحنه بارگذاری شد. منتظر GPS...';
             statusEl.className = '';
-            console.log('🚀 Web AR GPS Cube v4 (ارتفاع اصلاح شده) راه‌اندازی شد.');
+            console.log('🚀 Web AR GPS Cube v5 (ارتفاع همسان) راه‌اندازی شد.');
         });
 
         // ============================================================
@@ -637,9 +651,11 @@
             isCubePlaced = false;
             cubeLat = null;
             cubeLng = null;
+            cubeAbsoluteAlt = null;
             statusEl.textContent = '🔄 در حال جای‌گذاری مجدد...';
             statusEl.className = '';
             cubeCoordsEl.textContent = '—';
+            cubeAltitudeEl.textContent = '—';
             distValueEl.textContent = 'در حال محاسبه...';
             distDebugEl.textContent = '--';
             navText.textContent = 'جلو';
@@ -655,10 +671,10 @@
         // ============================================================
         requestAnimationFrame(mainLoop);
 
-        console.log('📡 Web AR GPS Cube v4 - با اصلاح ارتفاع');
-        console.log('   🔹 ارتفاع دوربین: از GPS دریافت می‌شود');
-        console.log('   🔹 ارتفاع مکعب: ۲٫۸ متر بالای سطح زمین (نسبت به دوربین)');
-        console.log('   🔹 اگر GPS altitude موجود نباشد، مکعب در ارتفاع ۲٫۸ متری از سطح دریا قرار می‌گیرد (ممکن است دقیق نباشد)');
+        console.log('📡 Web AR GPS Cube v5 - با همسان‌سازی ارتفاع');
+        console.log('   🔹 ارتفاع مکعب = ارتفاع دوربین + آفست (۰ متر برای روی زمین)');
+        console.log('   🔹 اگر ارتفاع دوربین موجود نباشد، مکعب در ارتفاع ۰ متری سطح دریا قرار می‌گیرد');
+        console.log('   🔹 برای تغییر ارتفاع مکعب، مقدار offset را در تابع placeCube تغییر دهید.');
 
     })();
 </script>
