@@ -7,11 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Web AR - Dynamic Cube</title>
     
-    <!-- ========================================================= -->
-    <!--  ⭐ کتابخانه‌های جدید AR.js نسخه ۳ (مشکل تبدیل مختصات حل شده) -->
-    <!-- ========================================================= -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.0.0/aframe/build/aframe-ar.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://rawcdn.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://rawcdn.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-gps.js"></script>
 
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -33,8 +31,13 @@
             border: 1px solid #0f0;
             box-shadow: 0 0 15px rgba(0,255,0,0.3);
         }
-        #debug .label { color: #aaa; }
-        #debug .value { color: #0f0; font-weight: bold; }
+        #debug .label {
+            color: #aaa;
+        }
+        #debug .value {
+            color: #0f0;
+            font-weight: bold;
+        }
         #distance {
             position: absolute;
             top: 20px;
@@ -67,8 +70,14 @@
             z-index: 50;
             pointer-events: none;
         }
-        .arrow { transition: transform 0.2s ease-out; font-size: 2.5rem; }
-        .text { font-size: 1.8rem; font-weight: bold; }
+        .arrow {
+            transition: transform 0.2s ease-out;
+            font-size: 2.5rem;
+        }
+        .text {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
         #status {
             position: absolute;
             bottom: 100px;
@@ -86,17 +95,14 @@
 </head>
 
 <body>
-    <!-- ========================================================= -->
-    <!--  ⭐ تنظیمات جدید AR.js: tracking: gps و sourceType: webcam -->
-    <!-- ========================================================= -->
-    <a-scene embedded arjs="sourceType: webcam; tracking: gps; debugUIEnabled: false;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+        <a-camera gps-camera rotation-reader></a-camera>
         
-        <!-- 1️⃣ دوربین جدید (gps-new-camera) - مشکل ارتفاع و جهت را حل می‌کند -->
-        <a-camera gps-new-camera rotation-reader position="0 1.6 0"></a-camera>
-        
+        <!-- مکعب به‌صورت پویا توسط جاوااسکریپت ساخته می‌شود -->
         <a-entity id="cube-container"></a-entity>
     </a-scene>
 
+    <!-- دیباگ مختصات -->
     <div id="debug">
         <div><span class="label">📍 دوربین (lat, lng):</span> <span id="cam-coords" class="value">در انتظار GPS...</span></div>
         <div><span class="label">🎯 مکعب (lat, lng):</span> <span id="cube-coords" class="value">هنوز مشخص نشده</span></div>
@@ -115,20 +121,18 @@
 
     <script>
         // ============================================================
-        //  🧭 تنظیمات (در صورت لزوم آفست جهت را اینجا تغییر بده)
-        // ============================================================
-        const COMPASS_OFFSET = 0; // اگر جهت برعکس بود این عدد را به 180 یا 200 تغییر بده
-        const EYE_HEIGHT = 1.6;   // ارتفاع چشم (متر)
-
-        // ============================================================
         //  متغیرهای اصلی
         // ============================================================
-        let cubeLat = null, cubeLng = null, isCubePlaced = false;
+        let cubeLat = null;
+        let cubeLng = null;
+        let cubeAltitude = 2.8; // ارتفاع ۲٫۸ متر
+        let isCubePlaced = false;
 
         const scene = document.querySelector('a-scene');
-        const cameraEl = document.querySelector('[gps-new-camera]'); // ⭐ انتخاب دوربین جدید
+        const cameraEl = document.querySelector('[gps-camera]');
         const cubeContainer = document.getElementById('cube-container');
 
+        // المان‌های دیباگ
         const camCoordsEl = document.getElementById('cam-coords');
         const cubeCoordsEl = document.getElementById('cube-coords');
         const distDebugEl = document.getElementById('dist-debug');
@@ -139,15 +143,18 @@
         const statusEl = document.getElementById('status');
 
         // ============================================================
-        //  توابع کمکی (همان‌طور که بود)
+        //  توابع کمکی
         // ============================================================
-        function generateRandomCoords(baseLat, baseLng, minDist = 12, maxDist = 15) {
+        function generateRandomCoords(baseLat, baseLng, minDist = 10, maxDist = 15) {
             const offsetScale = 0.000009;
             const dist = minDist + Math.random() * (maxDist - minDist);
             const angle = Math.random() * 2 * Math.PI;
             const dLat = (dist * Math.cos(angle)) * offsetScale;
             const dLng = (dist * Math.sin(angle)) * offsetScale;
-            return { lat: baseLat + dLat, lng: baseLng + dLng };
+            return {
+                lat: baseLat + dLat,
+                lng: baseLng + dLng
+            };
         }
 
         function computeBearing(lat1, lon1, lat2, lon2) {
@@ -169,67 +176,61 @@
         }
 
         // ============================================================
-        //  ساخت مکعب با API جدید (gps-new-entity-place)
+        //  ساخت مکعب در موقعیت جدید (اسکیل ۰٫۱ = ۱۰ سانتی‌متر)
         // ============================================================
-        function placeCube(lat, lng) {
+        function placeCube(lat, lng, alt = 2.8) {
             while (cubeContainer.firstChild) {
                 cubeContainer.removeChild(cubeContainer.firstChild);
             }
 
-            // =========================================================
-            //  ⭐ استفاده از gps-new-entity-place (نسخه جدید و پایدار)
-            //  مختصات GPS را به والد می‌دهیم و ارتفاع را با position روی فرزند
-            // =========================================================
-            const wrapper = document.createElement('a-entity');
-            wrapper.setAttribute('gps-new-entity-place', `latitude: ${lat}; longitude: ${lng};`);
-
             const box = document.createElement('a-box');
-            box.setAttribute('position', `0 ${EYE_HEIGHT} 0`);
+            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}; altitude: ${alt};`);
+            box.setAttribute('position', '0 0 0');
             box.setAttribute('material', 'color: yellow;');
-            box.setAttribute('scale', '0.05 0.05 0.05');
-            box.setAttribute('animation', 'property: scale; to: 0.1 0.1 0.1; dir: alternate; dur: 1000; loop: true');
+            
+            // ⭐ اسکیل ۰٫۱ = ۱۰ سانتی‌متر
+            box.setAttribute('scale', '0.1 0.1 0.1');
+            // انیمیشن بزرگ‌شدن تا ۰٫۱۵ (۱۵ سانتی‌متر)
+            box.setAttribute('animation', 'property: scale; to: 0.15 0.15 0.15; dir: alternate; dur: 1000; loop: true');
 
-            wrapper.appendChild(box);
-            cubeContainer.appendChild(wrapper);
+            cubeContainer.appendChild(box);
 
             cubeLat = lat;
             cubeLng = lng;
+            cubeAltitude = alt;
             isCubePlaced = true;
 
-            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${EYE_HEIGHT} متر)`;
+            cubeCoordsEl.textContent = `${lat.toFixed(7)}, ${lng.toFixed(7)} (ارتفاع ${alt.toFixed(2)} متر)`;
             statusEl.textContent = '✅ مکعب قرار گرفت!';
             statusEl.style.color = '#0f0';
-            console.log(`✅ مکعب در ارتفاع ${EYE_HEIGHT} متر قرار گرفت.`);
+
+            console.log(`✅ مکعب در مختصات (${lat}, ${lng}) با ارتفاع ${alt} متر قرار گرفت.`);
         }
 
         // ============================================================
-        //  حلقه‌ی اصلی بروزرسانی (بدون تغییر)
+        //  حلقه‌ی اصلی بروزرسانی (هر ۵۰۰ میلی‌ثانیه)
         // ============================================================
         setInterval(() => {
-            // ⭐ دسترسی به currentCoords در دوربین جدید
-            const camComp = cameraEl.components['gps-new-camera'];
+            const camComp = cameraEl.components['gps-camera'];
             if (!camComp || !camComp.currentCoords) {
                 statusEl.textContent = '⏳ در انتظار GPS...';
                 return;
             }
 
             const { latitude: userLat, longitude: userLng } = camComp.currentCoords;
+
             camCoordsEl.textContent = `${userLat.toFixed(7)}, ${userLng.toFixed(7)}`;
 
             if (!isCubePlaced) {
-                const randomPos = generateRandomCoords(userLat, userLng, 12, 15);
-                placeCube(randomPos.lat, randomPos.lng);
+                const randomPos = generateRandomCoords(userLat, userLng, 10, 15);
+                const alt = 2.8;
+                placeCube(randomPos.lat, randomPos.lng, alt);
             }
 
             if (isCubePlaced && cubeLat !== null && cubeLng !== null) {
                 const dist = computeDistance(userLat, userLng, cubeLat, cubeLng);
-                
-                const rawBearing = computeBearing(userLat, userLng, cubeLat, cubeLng);
-                let rawHeading = cameraEl.getAttribute('rotation').y;
-                
-                // اعمال آفست (در صورت نیاز)
-                let heading = (rawHeading + COMPASS_OFFSET) % 360;
-                let bearing = rawBearing;
+                const bearing = computeBearing(userLat, userLng, cubeLat, cubeLng);
+                const heading = cameraEl.getAttribute('rotation').y;
 
                 distDebugEl.textContent = `${dist.toFixed(1)} متر`;
                 headingDebugEl.textContent = `${heading.toFixed(1)}°`;
@@ -245,14 +246,18 @@
                 navText.textContent = instruction;
                 arrowIcon.style.transform = arrowRot;
 
-                if (dist < 2) {
+                if (dist < 5) {
                     navText.textContent = 'رسیدید! 🎉';
                     arrowIcon.style.display = 'none';
                 } else {
                     arrowIcon.style.display = 'block';
                 }
 
-                statusEl.textContent = `📏 ${dist.toFixed(1)} متر`;
+                if (dist < 50) {
+                    statusEl.textContent = `👀 نزدیک! (${dist.toFixed(1)} متر)`;
+                } else {
+                    statusEl.textContent = `🔭 فاصله: ${dist.toFixed(1)} متر`;
+                }
             }
         }, 500);
 
@@ -265,7 +270,7 @@
             statusEl.style.color = '#ff4444';
         });
 
-        console.log('🚀 برنامه WebAR با API جدید (GPS New) راه‌اندازی شد.');
+        console.log('🚀 برنامه WebAR با مکعب پویا راه‌اندازی شد.');
     </script>
 </body>
 </html>
