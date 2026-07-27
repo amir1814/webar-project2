@@ -570,7 +570,7 @@ visible="false"
             }
 
             // وضعیت بر اساس فاصله
-            if (dist < 5) {
+            if (dist < 3) {
                 statusEl.textContent = `🎯 در کنار مکعب! (${dist.toFixed(1)}m)`;
                 statusEl.className = 'ready';
             } else if (dist < 30) {
